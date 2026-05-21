@@ -14,6 +14,10 @@ class MateriaNoRegistradaError(LookupError):
     """Se consulta una materia que el estudiante no tiene registrada."""
 
 
+class SinNotasError(ValueError):
+    """Se intenta calcular el promedio de un estudiante sin notas registradas."""
+
+
 @dataclass(frozen=True)
 class Nota:
     materia: str
@@ -41,6 +45,13 @@ class Estudiante:
     def aprueba(self, materia: str, semestre: str) -> bool:
         nota = self._buscar_nota(materia, semestre)
         return nota.valor >= NOTA_APROBACION
+
+    def promedio(self) -> float:
+        if not self.notas:
+            raise SinNotasError(
+                f"El estudiante {self.nombre} no tiene notas registradas"
+            )
+        return sum(n.valor for n in self.notas) / len(self.notas)
 
     def _buscar_nota(self, materia: str, semestre: str) -> Nota:
         for nota in self.notas:
