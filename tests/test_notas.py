@@ -9,6 +9,7 @@ from registro_notas.notas import (
     MateriaNoRegistradaError,
     Nota,
     NotaFueraDeRangoError,
+    SinNotasError,
 )
 
 
@@ -58,3 +59,24 @@ class TestAprobacion:
         estudiante = Estudiante(nombre="Ana Perez")
         with pytest.raises(MateriaNoRegistradaError):
             estudiante.aprueba(materia="Fisica", semestre="2026-1")
+
+
+class TestPromedio:
+    """Requerimiento 3: calcular promedio de todas las notas."""
+
+    def test_cp10_promedio_de_varias_notas(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=3.0)
+        estudiante.registrar_nota(materia="Algebra", semestre="2026-1", valor=4.0)
+        estudiante.registrar_nota(materia="Fisica", semestre="2026-1", valor=5.0)
+        assert estudiante.promedio() == 4.0
+
+    def test_cp11_promedio_con_una_sola_nota(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=3.5)
+        assert estudiante.promedio() == 3.5
+
+    def test_cp12_promedio_sin_notas_lanza_error(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        with pytest.raises(SinNotasError):
+            estudiante.promedio()
