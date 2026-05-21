@@ -115,3 +115,77 @@ Distribucion: **15 casos** (minimo exigido = 12), repartidos 4/4/3/4 entre los c
 | CP-15 | R4 | El estado del estudiante no cambia tras error de duplicado | Existe ("Calculo","2026-1",4.0) | nueva nota ("Calculo","2026-1",2.0) | 1) registrar_nota() esperando excepcion 2) verificar lista de notas | Lista de notas sin cambios, nota original intacta con valor 4.0 | Negativo |
 
 ---
+
+## Parte 3 — Ciclo TDD evidenciado en los commits
+
+El historial de Git muestra el ciclo Red-Green-Refactor aplicado a los cuatro requerimientos. Cada commit lleva un prefijo explicito:
+
+- `test(reqN): RED` — se escriben los tests sin implementar la logica.
+- `feat(reqN): GREEN` — implementacion minima para que los tests pasen.
+- `refactor(...)` — mejoras de codigo manteniendo tests verdes.
+
+Total: **17 commits** documentando la evolucion del trabajo (minimo exigido = 10).
+
+### Reporte de cobertura
+
+Salida de `uv run pytest --cov=src/registro_notas --cov-report=term-missing`:
+
+```
+======================= test session starts =========================
+collected 26 items
+
+tests/step_defs/test_notas_steps.py ...........            [ 42%]
+tests/test_notas.py ...............                        [100%]
+
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.12.13-final-0 _______________
+
+Name                             Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------
+src/registro_notas/__init__.py       0      0      0      0   100%
+src/registro_notas/notas.py         39      0      8      0   100%
+----------------------------------------------------------------------------
+TOTAL                               39      0      8      0   100%
+============================== 26 passed in 0.08s ==============================
+```
+
+**Cobertura final: 100%** (umbral exigido por el enunciado: 85%, gate del CI: 80%).
+
+---
+
+## Parte 4 — BDD
+
+El archivo [`tests/features/notas.feature`](tests/features/notas.feature) contiene los escenarios escritos en lenguaje de negocio. Cumple:
+
+- Narrativa `Feature` con rol del usuario (registrador academico) y proposito.
+- `Background` reutilizado en todos los escenarios.
+- 6 escenarios entre los requerimientos 2, 3 y 4.
+- 1 `Scenario Outline` con tabla `Examples` de 6 combinaciones para la decision de aprobacion.
+- 2 escenarios de error con resultado esperado claro (`SinNotasError` y `NotaDuplicadaError`).
+- Tags `@smoke`, `@critical`, `@regression` en cada escenario, registrados como markers en `pyproject.toml`.
+
+Los step definitions estan en [`tests/step_defs/test_notas_steps.py`](tests/step_defs/test_notas_steps.py) y conectan cada paso del Gherkin con la misma API de produccion usada por los tests unitarios.
+
+---
+
+## Parte 5 — Pipeline CI/CD
+
+El workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre en cada push y PR a `main`:
+
+1. Checkout
+2. Instalacion de `uv` con cache
+3. Python 3.12
+4. `uv sync --frozen` (usa el lockfile)
+5. `pytest` ejecutando tests unitarios y BDD juntos con cobertura
+6. Falla si la cobertura baja del 80%
+7. Sube `coverage.xml` como artifact
+
+El pipeline esta en verde en [Actions del repositorio](https://github.com/Samuel-Tabares/registro-notas-academicas/actions).
+
+---
+
+## Parte 6 — Reflexion
+
+**Diseñar los casos antes vs. programar directo.** Cuando arranque a escribir la tabla de casos en la Parte 2, me obligue a pensar en escenarios que probablemente habria pasado por alto si hubiera empezado por el codigo: el caso CP-15 (verificar que el estado no cambia tras un error de duplicado) salio justamente de la pregunta 2 al PO. Si hubiera escrito primero la implementacion, lo natural habria sido crear la `Nota` y *despues* validar si ya existia — lo cual habria contaminado el estado del estudiante con la excepcion del rango antes de detectar el duplicado. La tabla me sirvio como contrato mental: antes de programar ya sabia que necesitaba un orden de validaciones especifico y que ese orden era testeable.
+
+**Lo mas dificil del TDD y la tentacion de saltarse pasos.** El paso REFACTOR fue donde mas senti la tentacion de saltar adelante. Despues del GREEN del Requerimiento 4 todo funcionaba y los 15 tests pasaban; mover codigo para consolidar `_existe_nota` y `_buscar_nota` en un solo helper se sintio como un riesgo innecesario. La disciplina de hacer ese commit aparte, con tests corriendo antes y despues, fue lo que dio el valor real: el diff del refactor quedo aislado y auditable, mientras que si lo hubiera mezclado con el GREEN nadie habria podido ver que la implementacion minima era distinta del codigo limpio final. Tambien me costo no implementar mas funciones de las que cada test pedia — por ejemplo, en el GREEN del Req2 tuve que resistir agregar `promedio()` y `registrar_nota` con validacion de duplicados porque "ya estaba ahi"; ceñirme a lo minimo y dejarlo para sus propios ciclos RED-GREEN despues hizo que cada commit cuente una sola historia.
