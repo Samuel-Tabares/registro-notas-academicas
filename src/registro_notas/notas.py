@@ -18,6 +18,10 @@ class SinNotasError(ValueError):
     """Se intenta calcular el promedio de un estudiante sin notas registradas."""
 
 
+class NotaDuplicadaError(ValueError):
+    """Ya existe una nota registrada para la misma materia en el mismo semestre."""
+
+
 @dataclass(frozen=True)
 class Nota:
     materia: str
@@ -38,9 +42,19 @@ class Estudiante:
     notas: list[Nota] = field(default_factory=list)
 
     def registrar_nota(self, materia: str, semestre: str, valor: float) -> Nota:
+        if self._existe_nota(materia, semestre):
+            raise NotaDuplicadaError(
+                f"Ya existe una nota para la materia '{materia}' en el "
+                f"semestre '{semestre}' del estudiante {self.nombre}"
+            )
         nota = Nota(materia=materia, semestre=semestre, valor=valor)
         self.notas.append(nota)
         return nota
+
+    def _existe_nota(self, materia: str, semestre: str) -> bool:
+        return any(
+            n.materia == materia and n.semestre == semestre for n in self.notas
+        )
 
     def aprueba(self, materia: str, semestre: str) -> bool:
         nota = self._buscar_nota(materia, semestre)
