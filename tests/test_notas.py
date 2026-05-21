@@ -8,6 +8,7 @@ from registro_notas.notas import (
     Estudiante,
     MateriaNoRegistradaError,
     Nota,
+    NotaDuplicadaError,
     NotaFueraDeRangoError,
     SinNotasError,
 )
@@ -80,3 +81,27 @@ class TestPromedio:
         estudiante = Estudiante(nombre="Ana Perez")
         with pytest.raises(SinNotasError):
             estudiante.promedio()
+
+
+class TestNoDuplicarNota:
+    """Requerimiento 4: no permitir dos notas para la misma materia y semestre."""
+
+    def test_cp13_registrar_duplicado_lanza_error(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=4.0)
+        with pytest.raises(NotaDuplicadaError):
+            estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=3.5)
+
+    def test_cp14_misma_materia_en_semestre_diferente_se_permite(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=3.0)
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-2", valor=4.0)
+        assert len(estudiante.notas) == 2
+
+    def test_cp15_estado_no_cambia_tras_error_de_duplicado(self):
+        estudiante = Estudiante(nombre="Ana Perez")
+        estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=4.0)
+        with pytest.raises(NotaDuplicadaError):
+            estudiante.registrar_nota(materia="Calculo", semestre="2026-1", valor=2.0)
+        assert len(estudiante.notas) == 1
+        assert estudiante.notas[0].valor == 4.0
