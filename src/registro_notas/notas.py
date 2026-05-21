@@ -35,6 +35,9 @@ class Nota:
                 f"[{NOTA_MINIMA}, {NOTA_MAXIMA}]"
             )
 
+    def corresponde_a(self, materia: str, semestre: str) -> bool:
+        return self.materia == materia and self.semestre == semestre
+
 
 @dataclass
 class Estudiante:
@@ -42,7 +45,7 @@ class Estudiante:
     notas: list[Nota] = field(default_factory=list)
 
     def registrar_nota(self, materia: str, semestre: str, valor: float) -> Nota:
-        if self._existe_nota(materia, semestre):
+        if self._buscar(materia, semestre) is not None:
             raise NotaDuplicadaError(
                 f"Ya existe una nota para la materia '{materia}' en el "
                 f"semestre '{semestre}' del estudiante {self.nombre}"
@@ -51,13 +54,13 @@ class Estudiante:
         self.notas.append(nota)
         return nota
 
-    def _existe_nota(self, materia: str, semestre: str) -> bool:
-        return any(
-            n.materia == materia and n.semestre == semestre for n in self.notas
-        )
-
     def aprueba(self, materia: str, semestre: str) -> bool:
-        nota = self._buscar_nota(materia, semestre)
+        nota = self._buscar(materia, semestre)
+        if nota is None:
+            raise MateriaNoRegistradaError(
+                f"El estudiante {self.nombre} no tiene registrada la materia "
+                f"'{materia}' en el semestre '{semestre}'"
+            )
         return nota.valor >= NOTA_APROBACION
 
     def promedio(self) -> float:
@@ -67,11 +70,8 @@ class Estudiante:
             )
         return sum(n.valor for n in self.notas) / len(self.notas)
 
-    def _buscar_nota(self, materia: str, semestre: str) -> Nota:
-        for nota in self.notas:
-            if nota.materia == materia and nota.semestre == semestre:
-                return nota
-        raise MateriaNoRegistradaError(
-            f"El estudiante {self.nombre} no tiene registrada la materia "
-            f"'{materia}' en el semestre '{semestre}'"
+    def _buscar(self, materia: str, semestre: str) -> Nota | None:
+        return next(
+            (n for n in self.notas if n.corresponde_a(materia, semestre)),
+            None,
         )
