@@ -17,6 +17,11 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-v"
+markers = [
+    "smoke: pruebas de humo mas criticas, deben pasar siempre",
+    "critical: escenarios de negocio que no pueden fallar",
+    "regression: escenarios de regresion mas amplios",
+]
 
 [tool.coverage.run]
 source = ["src/registro_notas"]
